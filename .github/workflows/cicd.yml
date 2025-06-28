@@ -8,6 +8,8 @@ jobs:
   compile:
     runs-on: runner-private #private runner
     steps:
+    - name: Clean workspace before start
+      run: rm -rf ${{ github.workspace }}/*
     - uses: actions/checkout@v4
     - name: Set up JDK 17
       uses: actions/setup-java@v4
