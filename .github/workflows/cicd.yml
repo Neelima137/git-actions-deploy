@@ -141,3 +141,31 @@ jobs:
          context: .
          push: true
          tags: neelima1234/bankappactions:latest
+         
+  deploy-to-gke:
+    runs-on:  runner-private
+    needs: build-docker-image-push
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        version: 'latest'
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: cts07-devadin
+
+    - name: Configure Docker to use gcloud as a credential helper
+      run: |
+        gcloud auth configure-docker
+
+    - name: Get GKE credentials
+      run: |
+        gcloud container clusters get-credentials github-actions-deploy --zone us-central1-a --project cts07-devadin
+
+    - name: Deploy to GKE
+      run: |
+        kubectl apply -f k8s/deployment.yaml
+        kubectl rollout status deployment/your-deployment-name
+
