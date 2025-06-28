@@ -112,6 +112,9 @@ jobs:
        with:
          name: app-jar
          path: app  # Downloads the JAR to the ./app folder
+     
+     - name: List JAR files
+       run: ls -lh app
         
      # Login to Docker Hub
      - name: Login to Docker Hub
@@ -132,5 +135,6 @@ jobs:
      - name: Build and push Docker image
        uses: docker/build-push-action@v6
        with:
+         context: .
          push: true
          tags: neelima1234/bankappactions:latest
