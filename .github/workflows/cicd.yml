@@ -161,7 +161,8 @@ jobs:
         
     - name: Authenticate with Google Cloud
       run: |
-        gcloud auth activate-service-account --key-file="${{ secrets.GCP_SA_KEY }}"
+        echo "${{ secrets.GCP_SA_KEY }}" > $HOME/gcp-key.json  # Write secret to file
+        gcloud auth activate-service-account --key-file=$HOME/gcp-key.json  # Activate service account
 
     - name: Configure Docker to use gcloud as a credential helper
       run: |
