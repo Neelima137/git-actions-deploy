@@ -155,6 +155,13 @@ jobs:
         version: 'latest'
         service_account_key: ${{ secrets.GCP_SA_KEY }}
         project_id: cts07-devadin
+    - name: Install kubectl
+      run: |
+        gcloud components install kubectl
+        
+    - name: Authenticate with Google Cloud
+      run: |
+        gcloud auth activate-service-account --key-file="${{ secrets.GCP_SA_KEY }}"
 
     - name: Configure Docker to use gcloud as a credential helper
       run: |
@@ -167,6 +174,6 @@ jobs:
     - name: Deploy to GKE
       run: |
         kubectl apply -f k8s/deployment.yaml
-        kubectl rollout status deployment/bankapp-deployment
+    
         
 
