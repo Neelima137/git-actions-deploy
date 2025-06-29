@@ -148,11 +148,11 @@ jobs:
     runs-on: runner-private #private runner
     needs: build-docker-image-push
     env:
-      PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-      GKE_CLUSTER: github-actions-deploy    # Add your cluster name here.
-      GKE_ZONE: us-central1-a  # Add your cluster zone here.
-      DEPLOYMENT_NAME: deployment # Add your deployment name here.
-      IMAGE: neelima1234/bankappactions 
+      PROJECT_ID: ${{ secrets.GKE_PROJECT }}  # Your Google Cloud project ID from secrets
+      GKE_CLUSTER: ${{ vars.GKE_CLUSTER }}  # GKE cluster name from variables
+      GKE_ZONE: ${{ vars.GKE_ZONE }}  # GKE zone from variables
+      DEPLOYMENT_NAME: deployment  # Kubernetes deployment name
+      IMAGE: neelima1234/bankappactions  # Docker image name from your DockerHub username
 
     steps:
     - name: Checkout
@@ -164,12 +164,14 @@ jobs:
         service_account_key: ${{ secrets.GKE_SA_KEY }}
         project_id: ${{ secrets.GKE_PROJECT }}
 
-    # Configure Docker to use the gcloud command-line tool as a credential
+    - name: Configure Docker for GCP
+      run: gcloud auth configure-docker
     # helper for authentication
     - run: |
         gcloud --quiet auth configure-docker
 
     # Get the GKE credentials so we can deploy to the cluster
+    - name: Get GKE credentials
     - uses: google-github-actions/get-gke-credentials@db150f2cc60d1716e61922b832eae71d2a45938f
       with:
         cluster_name: ${{ env.GKE_CLUSTER }}
@@ -202,7 +204,14 @@ jobs:
     # Deploy the Docker image to the GKE cluster
     - name: Deploy
       run: |
-        ./kustomize edit set image gcr.io/$PROJECT_ID/$IMAGE:latest
-        ./kustomize build ./k8s | kubectl apply -f -
-        kubectl rollout status deployment/$DEPLOYMENT_NAME
-        kubectl get services -o wide
+         # Update the image in Kustomize
+          ./kustomize edit set image gcr.io/$PROJECT_ID/$IMAGE:latest
+
+          # Build and apply the kustomize configuration to GKE
+          ./kustomize build ./k8s | kubectl apply -f -
+
+          # Check the deployment status
+          kubectl rollout status deployment/$DEPLOYMENT_NAME
+
+          # Optional: Get services to check the status
+          kubectl get services -o wide
