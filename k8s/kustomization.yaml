@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - k8s/deployment.yaml  # Make sure this file exists in your k8s folder
+images:
+  - name: gcr.io/$PROJECT_ID/$IMAGE
+    newTag: latest
