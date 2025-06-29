@@ -8,175 +8,176 @@ jobs:
   compile:
     runs-on: runner-private #private runner
     steps:
-    - name: Clean workspace before start
-      run: rm -rf ${{ github.workspace }}/*
-    - uses: actions/checkout@v4
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Maven install
-      run: sudo apt install maven -y
-    - name: Build with Maven
-      run: mvn compile
+      - name: Clean workspace before start
+        run: rm -rf ${{ github.workspace }}/*
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - name: Maven install
+        run: sudo apt install maven -y
+      - name: Build with Maven
+        run: mvn compile
   
   security-check:
     runs-on: runner-private #private runner
-    needs:  compile
+    needs: compile
     steps:
-    - uses: actions/checkout@v4
-    - name: Trivy installation
-      run: |
-        sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-        sudo apt-get update -y
-        sudo apt-get install -y trivy 
-    - name: Trivy fs scan 
-      run: trivy fs . --format table -o fs-report.json
+      - uses: actions/checkout@v4
+      - name: Trivy installation
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -y
+          sudo apt-get install -y trivy 
+      - name: Trivy fs scan 
+        run: trivy fs . --format table -o fs-report.json
 
-    - name: Gitleaks installation
-      run: sudo apt install gitleaks -y
-    - name: Git leaks code scan 
-      run: gitleaks detect source . -r gitleaks-reports.json -f json
+      - name: Gitleaks installation
+        run: sudo apt install gitleaks -y
+      - name: Git leaks code scan 
+        run: gitleaks detect source . -r gitleaks-reports.json -f json
 
   test:
     runs-on: runner-private #private runner
     needs: security-check
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Unit test cases 
-      run: mvn test
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - name: Unit test cases 
+        run: mvn test
       
   sonarqube-scan:
     runs-on: runner-private #private runner
     needs: test
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0 # Disabling shallow clones is recommended for improving the relevancy of reporting
-    - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v5.2.0
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Disabling shallow clones is recommended for improving the relevancy of reporting
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5.2.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
         
-    - name: SonarQube Quality Gate check
-      id: sonarqube-quality-gate-check
-      uses: sonarsource/sonarqube-quality-gate-action@master
-      continue-on-error: true
-      with:
-        pollingTimeoutSec: 600
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }} #OPTIONAL
+      - name: SonarQube Quality Gate check
+        id: sonarqube-quality-gate-check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        continue-on-error: true
+        with:
+          pollingTimeoutSec: 600
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }} #OPTIONAL
     
   build-project:
-     runs-on: runner-private #private runner
-     needs: sonarqube-scan
-     steps:
-     - uses: actions/checkout@v4
-     - name: Set up JDK 17
-       uses: actions/setup-java@v4
-       with:
-         java-version: '17'
-         distribution: 'temurin'
-         cache: maven
-     - name: Install Maven
-       run: sudo apt-get install -y maven
-     - name: Build with Maven
-       run: mvn package
+    runs-on: runner-private #private runner
+    needs: sonarqube-scan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - name: Install Maven
+        run: sudo apt-get install -y maven
+      - name: Build with Maven
+        run: mvn package
 
-     # Upload artifact
-     - name: Upload JAR Artifact
-       uses: actions/upload-artifact@v4
-       with:
-         name: app-jar
-         path: target/*.jar # or path/to/artifact
+      # Upload artifact
+      - name: Upload JAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: target/*.jar # or path/to/artifact
      
   build-docker-image-push:
-     runs-on: runner-private #private runner
-     needs: build-project
-     steps:
-     - uses: actions/checkout@v4
-       with:
-         submodules: recursive
-         fetch-depth: 0
+    runs-on: runner-private #private runner
+    needs: build-project
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
      
-     # Download artifact
-     - name: Download JAR Artifact  
-       uses: actions/download-artifact@v4
-       with:
-         name: app-jar
-         path: app  # Downloads the JAR to the ./app folder
+      # Download artifact
+      - name: Download JAR Artifact  
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: app  # Downloads the JAR to the ./app folder
      
-     - name: List JAR files
-       run: ls -lh app
+      - name: List JAR files
+        run: ls -lh app
         
-     # Login to Docker Hub
-     - name: Login to Docker Hub
-       uses: docker/login-action@v3
-       with:
-         username: ${{ vars.DOCKERHUB_USERNAME }}
-         password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
          
-     # Set up QEMU
-     - name: Set up QEMU
-       uses: docker/setup-qemu-action@v3
+      # Set up QEMU
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
        
-     # Set up Docker Buildx
-     - name: Set up Docker Buildx
-       uses: docker/setup-buildx-action@v3
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-     # Build and push Docker image
-     - name: Build and push Docker image
-       uses: docker/build-push-action@v6
-       with:
-         context: .
-         push: true
-         tags: neelima1234/bankappactions:latest
+      # Build and push Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: neelima1234/bankappactions:latest
          
   deploy-to-gke:
-    runs-on:  runner-private
+    runs-on: runner-private
     needs: build-docker-image-push
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v2
-      with:
-        version: 'latest'
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
-        project_id: cts07-devadin
-    - name: Install kubectl
-      run: |
-        gcloud components install kubectl
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: 'latest'
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: cts07-devadin
+
+      - name: Install kubectl
+        run: |
+          gcloud components install kubectl
         
-    - name: Authenticate with Google Cloud
-      run: |
-        echo "${{ secrets.GCP_SA_KEY }}" > $HOME/gcp-key.json  # Write secret to file
-        gcloud auth activate-service-account --key-file=$HOME/gcp-key.json  # Activate service account
+      - name: Authenticate with Google Cloud
+        run: |
+          # Write the GCP Service Account JSON key to a file
+          printf "%s" "${{ secrets.GCP_SA_KEY }}" > $HOME/gcp-key.json
+          
+          # Authenticate with Google Cloud using the service account key
+          gcloud auth activate-service-account --key-file=$HOME/gcp-key.json
 
-    - name: Configure Docker to use gcloud as a credential helper
-      run: |
-        gcloud auth configure-docker
+      - name: Configure Docker to use gcloud as a credential helper
+        run: |
+          gcloud auth configure-docker
 
-    - name: Get GKE credentials
-      run: |
-        gcloud container clusters get-credentials github-actions-deploy --zone us-central1-a --project cts07-devadin
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials github-actions-deploy --zone us-central1-a --project cts07-devadin
 
-    - name: Deploy to GKE
-      run: |
-        kubectl apply -f k8s/deployment.yaml
-    
-        
-
+      - name: Deploy to GKE
+        run: |
+          kubectl apply -f k8s/deployment.yaml
