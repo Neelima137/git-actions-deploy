@@ -142,7 +142,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: gcr.io/${{ secrets.GKE_PROJECT }}/$IMAGE:latest
+          tags: gcr.io/${{ secrets.GKE_PROJECT }}/${{ env.IMAGE }}:latest
          
   deploy-to-gke:
     runs-on: runner-private  # private runner
