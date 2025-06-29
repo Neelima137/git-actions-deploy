@@ -177,17 +177,7 @@ jobs:
         credentials: ${{ secrets.GKE_SA_KEY }}
         project_id: ${{ secrets.GKE_PROJECT }}
     # Create kustomization.yaml
-    - name: Create kustomization.yaml
-      run: |
-          echo "apiVersion: kustomize.config.k8s.io/v1beta1" > k8s/kustomization.yaml
-          echo "kind: Kustomization" >> k8s/kustomization.yaml
-          echo "resources:" >> k8s/kustomization.yaml
-          echo "  - k8s/deployment.yaml" >> k8s/kustomization.yaml
-          echo "images:" >> k8s/kustomization.yaml
-          echo "  - name: gcr.io/$PROJECT_ID/$IMAGE" >> k8s/kustomization.yaml
-          echo "    newTag: latest" >> k8s/kustomization.yaml
-          cat k8s/kustomization.yaml  # Output the content of kustomization.yaml for debugging
-
+  
 
     # # Build the Docker image
     # - name: Build
@@ -214,6 +204,6 @@ jobs:
       run: |-
         cd k8s
         ./kustomize edit set image gcr.io/$PROJECT_ID/$IMAGE:latest
-        ./kustomize build . | kubectl apply -f -
+        ./kustomize build ./k8s | kubectl apply -f -
         kubectl rollout status deployment/$DEPLOYMENT_NAME
         kubectl get services -o wide
