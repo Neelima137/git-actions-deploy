@@ -7,6 +7,7 @@ on:
 jobs:
   compile:
     runs-on: runner-private  # private runner
+    if: ${{ env.SKIP_PHASES != 'true' }}  # Skip job if SKIP_PHASES is true
     steps:
       - name: Clean workspace before start
         run: rm -rf ${{ github.workspace }}/*
@@ -24,6 +25,7 @@ jobs:
   
   security-check:
     runs-on: runner-private  # private runner
+    if: ${{ env.SKIP_PHASES != 'true' }}  # Skip job if SKIP_PHASES is true
     needs: compile
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +46,7 @@ jobs:
 
   test:
     runs-on: runner-private  # private runner
+    if: ${{ env.SKIP_PHASES != 'true' }}  # Skip job if SKIP_PHASES is true
     needs: security-check
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +61,7 @@ jobs:
       
   sonarqube-scan:
     runs-on: runner-private  # private runner
+    if: ${{ env.SKIP_PHASES != 'true' }}  # Skip job if SKIP_PHASES is true
     needs: test
     steps:
       - uses: actions/checkout@v4
