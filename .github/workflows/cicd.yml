@@ -146,7 +146,7 @@ jobs:
          
   deploy-to-gke:
     runs-on: runner-private #private runner
-    needs: build-project
+    needs: build-docker-image-push
     env:
       PROJECT_ID: ${{ secrets.GKE_PROJECT }}
       GKE_CLUSTER: github-actions-deploy    # Add your cluster name here.
