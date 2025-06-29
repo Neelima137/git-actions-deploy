@@ -105,44 +105,56 @@ jobs:
   build-docker-image-push:
     runs-on: runner-private  # private runner
     needs: build-project
+    env:
+      IMAGE: neelima1234/bankappactions  # Define your image name
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
 
-      # Download artifact
-      - name: Download JAR Artifact  
-        uses: actions/download-artifact@v4
-        with:
-          name: app-jar
-          path: app  # Downloads the JAR to the ./app folder
-     
-      - name: List JAR files
-        run: ls -lh app
-        
-      # Login to Docker Hub
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-         
-      # Set up QEMU
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-       
-      # Set up Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    # Download artifact (JAR file)
+    - name: Download JAR Artifact  
+      uses: actions/download-artifact@v4
+      with:
+        name: app-jar
+        path: app  # Downloads the JAR to the ./app folder
+    
+    - name: List JAR files
+      run: ls -lh app
 
-      # Build and push Docker image
-      - name: Build and push Docker image to GCR
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: gcr.io/${{ secrets.GKE_PROJECT }}/${{ env.IMAGE }}:latest
+    # Login to Docker Hub (if you're pushing to Docker Hub as well)
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ vars.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+   
+    # Set up QEMU for multi-platform support
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    # Set up Docker Buildx (used for building and pushing multi-platform images)
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    # Set up Google Cloud Authentication
+    - name: Authenticate to GCR
+      run: |
+        echo "${{ secrets.GKE_SA_KEY }}" | gcloud auth activate-service-account --key-file=-
+        gcloud --quiet auth configure-docker
+
+    # Build and push Docker image to GCR
+    - name: Build and push Docker image to GCR
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: gcr.io/${{ secrets.GKE_PROJECT }}/${{ env.IMAGE }}:latest
+        load: false  # If you want to load the image locally, set to true, but usually false for GCR
+        no-cache: false  # Set to true if you want to avoid using the cache
+        pull: true  # Ensure the latest base images are pulled during the build
+
          
   deploy-to-gke:
     runs-on: runner-private  # private runner
