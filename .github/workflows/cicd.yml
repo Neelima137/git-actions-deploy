@@ -153,10 +153,13 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     # Set up Google Cloud Authentication
-    - name: Authenticate to GCR
+    - name: Authenticate with Google Cloud
       run: |
         echo "${{ secrets.GKE_SA_KEY }}" | gcloud auth activate-service-account --key-file=-
         gcloud --quiet auth configure-docker
+      env:
+        IMAGE: neelima1234/bankappactions
+
 
     # Build and push Docker image to GCR
     - name: Build and push Docker image to GCR
